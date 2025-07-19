@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>&#10023; &#9789; &#10055; &#10048; Elvie's Goal Tracker &#10048; &#10055; &#9789; &#10023;</title>
+    <link rel="icon" type="image/jpg" href="goal tracker app icon.jpg">
+
+    <style>
+        :root {
+            --white: #ffffff;
+            --black: #000000;
+            --background: #F7F3EF;
+            --primary: #9C7C65;
+            --secondary: #C4AFA1;
+            --accent: #B89A83;
+            --dark_text: #5A4435;
+            --light_text: #EDE3DB;
+        }
+
+        body {
+            font-family: Garamond;
+            background: var(--background);
+            color: var(--dark_text);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .category {
+            background: var(--accent);
+            border: 1px solid var(--accent);
+            color: var(--light_text);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .goal {
+            margin-top: 10px;
+        }
+
+        input,
+        button,
+        select {
+            padding: 5px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 0px solid;
+            font-family: Garamond;
+            color: var(--light_text);
+        }
+
+        button {
+            background: var(--primary);
+        }
+
+        button:hover {
+            background: var(--secondary);
+            cursor: pointer;
+        }
+
+        input[type="text"] {
+            border: 1px solid var(--secondary);
+            width: 90vw;
+            color: var(--dark_text);
+        }
+
+        input::placeholder {
+            color: var(--dark_text);
+            font-style: italic;
+        }
+
+        #newCategory {
+            width: 93vw;
+        }
+
+        input[type="datetime-local"] {
+            color: var(--dark_text);
+        }
+
+        input[type="number"] {
+            color: var(--dark_text);
+            width: 30px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        .task-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>&#10023; &#9789; &#10055; &#10048; Elvie's Goal Tracker &#10048; &#10055; &#9789; &#10023;</h1>
+    <div id="categories"></div>
+
+    <h2>Add Category</h2>
+    <input type="text" id="newCategory" placeholder="New category name">
+    <button onclick="addCategory()">Add Category</button>
+
+    <script>
+        const categoriesContainer = document.getElementById("categories");
+        let categories = [];
+
+        if (localStorage.getItem("goalCategories")) {
+            categories = JSON.parse(localStorage.getItem("goalCategories"));
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem("goalCategories", JSON.stringify(categories));
+        }
+
+        function renderCategories() {
+            categories.sort((a, b) => a.priority - b.priority);
+            categoriesContainer.innerHTML = "";
+            categories.forEach((cat, index) => {
+                const categoryDiv = document.createElement("div");
+                categoryDiv.className = "category";
+
+                categoryDiv.innerHTML = `
+        <h3>${cat.name} <button onclick="removeCategory(${index})">Remove</button></h3>
+        <label>Priority:</label>
+        <input type="number" value="${cat.priority}" min="1" onchange="updatePriority(${index}, this.value)" />
+        <div class="goal">
+          <label>Goal:</label>
+          <input type="text" placeholder="No Goal" value="${cat.goal}" onchange="updateGoal(${index}, this.value)" />
+          <br />
+          <label>Deadline:</label>
+          <input type="datetime-local" value="${cat.deadline}" onchange="updateDeadline(${index}, this.value)" />
+          <p><strong>Time left:</strong> <span id="time-${index}">${timeLeft(cat.deadline)}</span></p>
+        </div>
+        <div class="tasks">
+          <h4>Tasks</h4>
+          <ul id="task-list-${index}">
+            ${cat.tasks.map((task, tIndex) => `<li class="task-item">${task} <button onclick="removeTask(${index}, ${tIndex})">Remove</button></li>`).join("")}
+          </ul>
+          <input type="text" placeholder="New Task" id="new-task-${index}">
+          <button onclick="addTask(${index})">Add Task</button>
+        </div>
+      `;
+                categoriesContainer.appendChild(categoryDiv);
+            });
+        }
+
+        function addCategory() {
+            const name = document.getElementById("newCategory").value.trim();
+            if (name) {
+                categories.push({
+                    name,
+                    goal: "",
+                    deadline: new Date().toISOString().slice(0, 16),
+                    tasks: [],
+                    priority: categories.length + 1
+                });
+                document.getElementById("newCategory").value = "";
+                saveToLocalStorage();
+                renderCategories();
+            }
+        }
+
+        function removeCategory(index) {
+            categories.splice(index, 1);
+            saveToLocalStorage();
+            renderCategories();
+        }
+
+        function updateGoal(index, value) {
+            categories[index].goal = value;
+            saveToLocalStorage();
+        }
+
+        function updatePriority(index, value) {
+            const priority = parseInt(value);
+            if (!isNaN(priority)) {
+                categories.forEach(cat => {
+                    if (cat.priority >= priority) {
+                        cat.priority += 1;
+                    }
+                });
+                categories[index].priority = priority;
+                saveToLocalStorage();
+                renderCategories();
+            }
+        }
+
+        function updateDeadline(index, value) {
+            categories[index].deadline = value;
+            saveToLocalStorage();
+            renderCategories();
+        }
+
+        function addTask(catIndex) {
+            const input = document.getElementById(`new-task-${catIndex}`);
+            const task = input.value.trim();
+            if (task) {
+                categories[catIndex].tasks.push(task);
+                input.value = "";
+                saveToLocalStorage();
+                renderCategories();
+            }
+        }
+
+        function removeTask(catIndex, taskIndex) {
+            categories[catIndex].tasks.splice(taskIndex, 1);
+            saveToLocalStorage();
+            renderCategories();
+        }
+
+        function timeLeft(deadline) {
+            const end = new Date(deadline);
+            const now = new Date();
+            const diff = end - now;
+            if (diff <= 0) return "Expired";
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((diff / (1000 * 60)) % 60);
+            return `${days}d ${hours}h ${mins}m`;
+        }
+
+        setInterval(() => {
+            categories.forEach((cat, index) => {
+                const timeSpan = document.getElementById(`time-${index}`);
+                if (timeSpan) timeSpan.textContent = timeLeft(cat.deadline);
+            });
+        }, 60000);
+
+        renderCategories();
+    </script>
+</body>
+
+</html>
